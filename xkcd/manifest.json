@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "XKCD Password Generator",
+  "name": "Correct Horse Password Generator",
   "version": "1.0",
   "description": "Generates XKCD-style passwords from selected text fields",
   "permissions": [
