@@ -25,23 +25,46 @@ function getRandomValues() {
 
 // Add text to clipboard using offscreen document
 async function addToClipboard(value) {
-  // Check if we have any existing offscreen document
   try {
-    // Create the offscreen document
-    await chrome.offscreen.createDocument({
-      url: 'offscreen.html',
-      reasons: [chrome.offscreen.Reason.CLIPBOARD],
-      justification: 'Write text to the clipboard.'
+    // Check if offscreen document already exists
+    const existingContexts = await chrome.runtime.getContexts({
+      contextTypes: ['OFFSCREEN_DOCUMENT']
     });
 
-    // Send the message to the offscreen document
-    chrome.runtime.sendMessage({
+    if (existingContexts.length === 0) {
+      // Create the offscreen document
+      await chrome.offscreen.createDocument({
+        url: 'offscreen.html',
+        reasons: [chrome.offscreen.Reason.CLIPBOARD],
+        justification: 'Write text to the clipboard.'
+      });
+    }
+
+    // Send the message to the offscreen document with retry logic
+    await sendMessageWithRetry({
       type: 'copy-data-to-clipboard',
       target: 'offscreen-doc',
       data: value
     });
   } catch (e) {
     console.error('Error handling clipboard:', e);
+  }
+}
+
+// Helper function to send message with retry logic
+async function sendMessageWithRetry(message, maxRetries = 3, delay = 100) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await chrome.runtime.sendMessage(message);
+      return; // Success, exit the retry loop
+    } catch (error) {
+      console.log(`Message send attempt ${attempt} failed:`, error);
+      if (attempt === maxRetries) {
+        throw error; // Re-throw on final attempt
+      }
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay * attempt));
+    }
   }
 }
 
